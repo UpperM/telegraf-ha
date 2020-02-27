@@ -1,9 +1,6 @@
 #!/bin/bash
-SERVICE=telegraf-slave;
-MASTER_HOSTNAME=far-grafana1;
-PRIVATE_KEY=~/.ssh/id_rsa;
-CONF_PATH_REMOTE=/etc/telegraf # Folder where are stored config in master
-CONF_PATH_SYNC=/etc/telegraf-slave # Local folder where are stored config from master
+CONFIG_FILE=/etc/telegraf-slave/telegraf-slave.conf
+. $CONFIG_FILE # Load configuration
 
 getLocalTelegrafStatus() {
 
@@ -52,7 +49,7 @@ runConfigSync(){
 	if getRemoteServerStatus
 	then
 	echo "Run config sync .."
-		scp -r root@$MASTER_HOSTNAME:$CONF_PATH_REMOTE/* $CONF_PATH_SYNC > /dev/null
+		scp -r $AUTH_USER@$MASTER_HOSTNAME:$CONF_PATH_REMOTE/* $CONF_PATH_SYNC > /dev/null
 	else
 		echo "Can't synchronize telegraf configuration from master"
 	fi
@@ -105,4 +102,9 @@ installTelegrafSlave(){
 
 }
 
-main
+while true
+do
+	main
+	sleep $CHECK_INTERVAL
+done
+

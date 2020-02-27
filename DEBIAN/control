@@ -6,4 +6,4 @@ Architecture: all
 Depends: telegraf, ssh
 Maintainer: Matthieu COURTOIS
 Description: High avaibility between two telegraf server node
-Homepage: https://github.com/UpperM/telegrafHA
+Homepage: https://github.com/UpperM/telegraf-ha

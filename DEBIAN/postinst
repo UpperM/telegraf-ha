@@ -1,19 +1,34 @@
 #!/bin/bash
-	echo '
-	[Unit]
-	Description=The plugin-driven server agent for reporting metrics into InfluxDB
-	Documentation=https://github.com/influxdata/telegraf
-	After=network.target
 
-	[Service]
-	EnvironmentFile=-/etc/default/telegraf
-	User=telegraf
-	ExecStart=/usr/bin/telegraf -config /etc/telegraf-slave/telegraf.conf -config-directory /etc/telegraf-slave/telegraf.d $TELEGRAF_OPTS
-	ExecReload=/bin/kill -HUP $MAINPID
-	Restart=on-failure
-	RestartForceExitStatus=SIGPIPE
-	KillMode=control-group
+echo "Installing telegraf-slave service"
+echo '
+[Unit]
+Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Documentation=https://github.com/influxdata/telegraf
+After=network.target
 
-	[Install]
-	WantedBy=multi-user.target
-	' > /usr/lib/systemd/system/telegraf-slave.service
+[Service]
+EnvironmentFile=-/etc/default/telegraf
+User=telegraf
+ExecStart=/usr/bin/telegraf -config /etc/telegraf-slave/telegraf.conf -config-directory /etc/telegraf-slave/telegraf.d $TELEGRAF_OPTS
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartForceExitStatus=SIGPIPE
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target
+' > /usr/lib/systemd/system/telegraf-slave.service
+
+echo "Installing telegraf-ha service"
+echo '
+[Unit]
+Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Documentation=https://github.com/UpperM/telegraf-ha/
+After=network.target
+[Service]
+ExecStart=/usr/bin/telegraf-ha
+ExecReload=/bin/kill -HUP $MAINPID
+[Install]
+WantedBy=multi-user.target
+' > /usr/lib/systemd/system/telegraf-ha.service
