@@ -1,0 +1,108 @@
+#!/bin/bash
+SERVICE=telegraf-slave;
+MASTER_HOSTNAME=far-grafana1;
+PRIVATE_KEY=~/.ssh/id_rsa;
+CONF_PATH_REMOTE=/etc/telegraf # Folder where are stored config in master
+CONF_PATH_SYNC=/etc/telegraf-slave # Local folder where are stored config from master
+
+getLocalTelegrafStatus() {
+
+	systemctl is-active --quiet telegraf-slave > /dev/null
+	if [ $? -eq 0 ]
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+getRemoteServerStatus(){
+
+	ping -c 2 $MASTER_HOSTNAME > /dev/null
+	if [ $? -eq 0 ]
+	then
+		echo "Master is UP"
+		return 0
+	else
+		echo "Master is DOWN"
+		return 1
+	fi
+}
+
+getRemoteTelegrafStatus(){
+
+	if getRemoteServerStatus
+	then
+		ssh $MASTER_HOSTNAME -i $PRIVATE_KEY "pgrep -f telegraf > /dev/null"
+	fi
+
+	if [ $? -eq 0 ]
+	then
+		echo "Telegraf is running on Master"
+		return 0
+	else
+		echo "Telegraf is down on Master"
+		return 1
+	fi
+
+}
+
+
+runConfigSync(){
+	if getRemoteServerStatus
+	then
+	echo "Run config sync .."
+		scp -r root@$MASTER_HOSTNAME:$CONF_PATH_REMOTE/* $CONF_PATH_SYNC > /dev/null
+	else
+		echo "Can't synchronize telegraf configuration from master"
+	fi
+}
+
+main() {
+
+	runConfigSync
+
+	if getRemoteTelegrafStatus
+	then
+		# If main server is running, kill local telegraf
+		if getLocalTelegrafStatus
+		then
+			systemctl stop telegraf-slave
+			echo "Stop local telegraf"
+		fi
+	else
+		# If main server is dead, start local telegraf
+		echo "Start local telegraf"
+		systemctl start telegraf-slave
+
+		if getLocalTelegrafStatus
+		then
+			echo "Failed to start local Telegraf"
+		fi
+	fi
+}
+
+installTelegrafSlave(){
+
+	echo '
+	[Unit]
+	Description=The plugin-driven server agent for reporting metrics into InfluxDB
+	Documentation=https://github.com/influxdata/telegraf
+	After=network.target
+
+	[Service]
+	EnvironmentFile=-/etc/default/telegraf
+	User=telegraf
+	ExecStart=/usr/bin/telegraf -config /etc/telegraf-slave/telegraf.conf -config-directory /etc/telegraf-slave/telegraf.d $TELEGRAF_OPTS
+	ExecReload=/bin/kill -HUP $MAINPID
+	Restart=on-failure
+	RestartForceExitStatus=SIGPIPE
+	KillMode=control-group
+
+	[Install]
+	WantedBy=multi-user.target
+	' > /usr/lib/systemd/system/telegraf-slave.service
+
+}
+
+main
