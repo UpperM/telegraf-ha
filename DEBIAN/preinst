@@ -3,14 +3,14 @@
 echo "Installing telegraf-slave service"
 echo '
 [Unit]
-Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Description=The plugin-driven server agent for reporting metrics into InfluxDB - SALVE AGENT
 Documentation=https://github.com/influxdata/telegraf
 After=network.target
 
 [Service]
 EnvironmentFile=-/etc/default/telegraf
 User=telegraf
-ExecStart=/usr/bin/telegraf -config /etc/telegraf-slave/telegraf.conf -config-directory /etc/telegraf-slave/telegraf.d $TELEGRAF_OPTS
+ExecStart=/usr/bin/telegraf -config /etc/telegraf-ha/telegraf.conf -config-directory /etc/telegraf-ha/telegraf.d $TELEGRAF_OPTS
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartForceExitStatus=SIGPIPE
@@ -23,7 +23,7 @@ WantedBy=multi-user.target
 echo "Installing telegraf-ha service"
 echo '
 [Unit]
-Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Description=Fail over between two telegraf servers
 Documentation=https://github.com/UpperM/telegraf-ha/
 After=network.target
 [Service]

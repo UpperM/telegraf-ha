@@ -1,10 +1,32 @@
 #!/bin/bash
-CONFIG_FILE=/etc/telegraf-slave/telegraf-slave.conf
+# ------------------------------------------------------------------
+# [UpperM] 	telegraf-ha
+#			Description
+#
+#         	Checking telegraf status on master server and syncing configurations.
+#			If master is down, the script start local telegraf service (telegraf-slave.service)
+#
+# Dependency:
+#     https://github.com/influxdata/telegraf
+# ------------------------------------------------------------------
+
+CONFIG_FILE="/etc/telegraf-ha/telegraf-ha.conf"
 . $CONFIG_FILE # Load configuration
 
 getLocalTelegrafStatus() {
 
-	systemctl is-active --quiet telegraf-slave > /dev/null
+	STATUS="$(systemctl is-active telegraf-slave.service)"
+	if [ "${STATUS}" = "active" ]
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+getRemoteServerStatus() {
+
+	ping -c 1 "$MASTER_HOSTNAME" > /dev/null
 	if [ $? -eq 0 ]
 	then
 		return 0
@@ -13,51 +35,70 @@ getLocalTelegrafStatus() {
 	fi
 }
 
-getRemoteServerStatus(){
-
-	ping -c 2 $MASTER_HOSTNAME > /dev/null
-	if [ $? -eq 0 ]
-	then
-		echo "Master is UP"
-		return 0
-	else
-		echo "Master is DOWN"
-		return 1
-	fi
-}
-
-getRemoteTelegrafStatus(){
+getRemoteTelegrafStatus() {
 
 	if getRemoteServerStatus
 	then
-		ssh $MASTER_HOSTNAME -i $PRIVATE_KEY "pgrep -f telegraf > /dev/null"
-	fi
-
-	if [ $? -eq 0 ]
-	then
-		echo "Telegraf is running on Master"
-		return 0
+		#ssh -qn $AUTH_USER@$MASTER_HOSTNAME pidof telegraf &>/dev/null
+		ssh -qn "$AUTH_USER"@"$MASTER_HOSTNAME" pidof telegraf &>/dev/null
+		if [ $? -eq 0 ]
+		then
+			log "Telegraf is running on Master"
+			return 0
+		else
+			log "Telegraf is down on Master"
+			return 1
+		fi
 	else
-		echo "Telegraf is down on Master"
-		return 1
+		log "Master is not reachable"
 	fi
-
 }
 
-
-runConfigSync(){
+runConfigSync() {
 	if getRemoteServerStatus
 	then
-	echo "Run config sync .."
-		scp -r $AUTH_USER@$MASTER_HOSTNAME:$CONF_PATH_REMOTE/* $CONF_PATH_SYNC > /dev/null
+		log "Running configuration synchronization"
+		scp -r "$AUTH_USER"@"$MASTER_HOSTNAME":"$CONF_PATH_REMOTE"/* "$CONF_PATH_SYNC" > /dev/null
 	else
-		echo "Can't synchronize telegraf configuration from master"
+		log "Can't synchronize telegraf configuration from master"
 	fi
+}
+
+startLocalTelegraf() {
+
+	if ! getLocalTelegrafStatus
+	then
+		log "Start local telegraf"
+		systemctl start telegraf-slave
+	fi
+
+	if getLocalTelegrafStatus
+	then
+		log "Local Telegraf is master"
+	else
+		log "Failed to start local Telegraf"
+	fi
+}
+
+log() {
+
+	logDate=$(date +"%m-%d-%y %T")
+	msg="$logDate : $1"
+	echo "$msg" >> "$LOG_FILE"
+
+	if [ "${DEBUG}" = "TRUE" ]
+	then
+		echo "$msg"
+	fi
+
 }
 
 main() {
 
-	runConfigSync
+	if getRemoteServerStatus
+	then
+		runConfigSync
+	fi
 
 	if getRemoteTelegrafStatus
 	then
@@ -65,46 +106,19 @@ main() {
 		if getLocalTelegrafStatus
 		then
 			systemctl stop telegraf-slave
-			echo "Stop local telegraf"
+			log "Stop local telegraf"
 		fi
 	else
 		# If main server is dead, start local telegraf
-		echo "Start local telegraf"
-		systemctl start telegraf-slave
-
-		if getLocalTelegrafStatus
-		then
-			echo "Failed to start local Telegraf"
-		fi
+		startLocalTelegraf
 	fi
 }
 
-installTelegrafSlave(){
-
-	echo '
-	[Unit]
-	Description=The plugin-driven server agent for reporting metrics into InfluxDB
-	Documentation=https://github.com/influxdata/telegraf
-	After=network.target
-
-	[Service]
-	EnvironmentFile=-/etc/default/telegraf
-	User=telegraf
-	ExecStart=/usr/bin/telegraf -config /etc/telegraf-slave/telegraf.conf -config-directory /etc/telegraf-slave/telegraf.d $TELEGRAF_OPTS
-	ExecReload=/bin/kill -HUP $MAINPID
-	Restart=on-failure
-	RestartForceExitStatus=SIGPIPE
-	KillMode=control-group
-
-	[Install]
-	WantedBy=multi-user.target
-	' > /usr/lib/systemd/system/telegraf-slave.service
-
-}
+log "STARTING TELEGRAF-HA"
 
 while true
 do
 	main
-	sleep $CHECK_INTERVAL
+	log "Waiting $CHECK_INTERVAL s ..."
+	sleep "$CHECK_INTERVAL"
 done
-

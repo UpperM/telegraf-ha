@@ -1,0 +1,2 @@
+systemctl stop telegraf-slave > /dev/null
+systemctl stop telegraf-ha > /dev/null

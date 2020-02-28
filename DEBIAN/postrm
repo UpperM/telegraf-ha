@@ -1,0 +1,8 @@
+TELEGRAF_SLAVE_SERVICE="/usr/lib/systemd/system/telegraf-slave.service"
+TELEGRAF_HA_SERVICE="/usr/lib/systemd/system/telegraf-ha.service"
+TELEGRAF_HA_PATH="/etc/telegraf-ha"
+TELEGRAF_BIN="/usr/bin/telegraf-ha"
+rm $TELEGRAF_SLAVE_SERVICE -rf > /dev/null
+rm $TELEGRAF_HA_SERVICE -rf > /dev/null
+rm $TELEGRAF_HA_PATH -rf > /dev/null
+rm $TELEGRAF_BIN -rf > /dev/null

@@ -1,9 +1,9 @@
-Package: telegrafha
+Package: telegraf-ha
 Version: 0.1
 Section: base
 Priority: optional
 Architecture: all
 Depends: telegraf, ssh
 Maintainer: Matthieu COURTOIS
-Description: High avaibility between two telegraf server node
+Description: Fail over between two telegraf servers
 Homepage: https://github.com/UpperM/telegraf-ha
