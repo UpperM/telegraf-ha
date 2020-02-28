@@ -12,13 +12,13 @@
 
 ## Description
 
-This project adds a basic fail over mode layer to Telegraf.
-It's useful when you use Telegraf in pull mode.
+This project adds a basic fail over mode to Telegraf. It's useful when you use Telegraf in pull mode.<br>
 
-Slave server check master status (reachabled & system status) each 60s (default interval) and sync telegraf config
-If the master is not reachable, or telegraf service is down, the slave start his telegraf-slave instance with the configuration synced.
-When master come back, salve server stop telegraf-slave service.
+Slave server check master status (reachable and telegraf service status) each 60s (default interval) and sync telegraf config of master.<br>
+If the master is not reachable, or telegraf service is down, the slave start his telegraf-slave instance with the configuration synced.<br>
+When master come back, salve server stop telegraf-slave service.<br>
 
+A copy of telegraf service is created (telegraf-salve.service), so you can run your telegraf for monitoring your slave server.<br>
 ## Tested on
 
 - Debian Buster
