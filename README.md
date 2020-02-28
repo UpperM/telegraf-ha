@@ -1,6 +1,7 @@
-# telegraf-ha
+<p align="center">
 
-[![License][license-img]][license-href]
+  <h1 align="center">Telegraf - High Avaibility</h1>
+ </p>
 
 1. [Description](#description)
 2. [Installation](#installation)
@@ -81,8 +82,3 @@ You can see the log while process is running
 ```sh
 tail -f /var/log/telegraf-ha.log
 ```
-
-[license-img]: https://img.shields.io/badge/license-MIT-blue.svg
-[license-href]: LICENSE
-[overview-href]: https://github.com/influxdata/influxdb-relay
-[contribute-href]: CONTRIBUTING.md
